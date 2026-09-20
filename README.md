@@ -9,6 +9,17 @@ This repository is here so that every number on our slides can be checked. It ho
 the analysis reports and the value-at-risk workbook. It does not hold the slides, and it does
 not hold the raw data — see [What is not here](#what-is-not-here).
 
+> **Please read this before the numbers.** This is student competition work. It is not affiliated
+> with, authorised by, or endorsed by Capgemini or Stellantis. **The company in the case is
+> anonymous.** We use **Stellantis as a same-scale public proxy** for it, because its scale and
+> structure match the case and because its financial disclosures are public and checkable — which
+> is the only way an outside team can build an evidenced answer at all.
+>
+> **The figures here are therefore a model of the case's fictional group, not a finding about
+> Stellantis.** "€913m a year at risk" is a modelled exposure under stated assumptions, two-thirds
+> of it resting on assumptions we label as ours. It is not a statement about that company's actual
+> performance, controls or results, and nothing here is investment advice.
+
 ---
 
 ## The rule we worked to
@@ -161,3 +172,9 @@ Kattuman on discount pass-through.
 
 Code is MIT (see `LICENSE`). The reports and figures are CC BY 4.0. The underlying datasets
 remain under their own licences and are not redistributed here.
+
+**Affiliation and accuracy.** Independent student work for a case competition, not affiliated with
+or endorsed by Capgemini or Stellantis. Stellantis is used as a public same-scale proxy for the
+case's anonymous group; figures derived from its disclosures are cited to the filing they come
+from, and any error in reading them is ours. Trade marks belong to their owners. Provided as-is,
+with no warranty — see `LICENSE`.

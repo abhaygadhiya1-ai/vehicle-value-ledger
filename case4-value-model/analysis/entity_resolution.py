@@ -442,7 +442,7 @@ def main():
         "",
         "This is the source the 2026-09-17 audit caught, and it matters twice over. The copies cost "
         "nothing directly, but they sat in **both halves of a train/test split** and flattered the "
-        "value engine's held-out test until they were removed (`../Case4_Audit.md`: coverage 81% to "
+        "value engine's held-out test until they were removed (the 2026-09-17 audit: coverage 81% to "
         "80%, typical error 9.9% to 10.5%). A duplicate that survives into the measurement set "
         "corrupts the baseline a saving is certified against - which is the argument for resolving "
         "entities *before* booking any benefit, not after.",

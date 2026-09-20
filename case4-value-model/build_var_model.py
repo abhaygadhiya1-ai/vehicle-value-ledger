@@ -809,13 +809,19 @@ def sheet_readme(wb, rows):
         "book due within twelve months; the whole book over a three-year lease is on its sheet for "
         "context, beside what the group actually booked on these contracts in 2023-2025.",
         "",
-        "What this model deliberately does not contain",
-        "A discount-to-resale pass-through factor. Every baseline answer to this case assumes one. "
-        "We tried to measure it (analysis/tesla_event_report.md) and could not: "
-        f"{float(by_id['tesla_pre_announcement']['value']):.0f}% of the used-Tesla repricing had "
-        "happened before the January 2023 US list-price cut, alongside earlier discounts and a "
-        "price cut in China. Quoting a number we could not measure would undo the point of the rest "
-        "of the workbook.",
+        "The discount-to-resale pass-through, and where it sits",
+        "The Prior discounting sheet is a decomposition of leaks 1 and 3, not a fourth leak: those "
+        "euros are already counted, in leak 1 as spend and in leak 3 as residual exposure, and are "
+        "cut there by cause instead of by business. Adding them to the total would be double "
+        "counting, so the headline is unaffected by them.",
+        "The first attempt to measure the pass-through failed and stays withdrawn "
+        f"(analysis/tesla_event_report.md): {float(by_id['tesla_pre_announcement']['value']):.0f}% "
+        "of the used-Tesla repricing had happened before the January 2023 US list-price cut, "
+        "alongside earlier discounts and a price cut in China. The second attempt works because it "
+        "compares a car with itself rather than a market with itself, and it passes a placebo the "
+        "event study never had (analysis/discount_passthrough_report.md). The low end is ours and "
+        "is an upper bound - the source carries no trim field; the high end is published. Quote "
+        "the range, never one end.",
         "",
         "Currency and basis",
         "EUR millions a year unless stated. Group figures are Stellantis FY2025, used as a "

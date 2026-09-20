@@ -6,7 +6,7 @@
 > and 2,617,260, pooled −9.2%); step 7's 14.7% pooling gain at 100 cars (now 4.3%) and the +2.8% vs
 > +30.6% sibling gap (now +2.7% vs +31.6%, and no gap inside Europe); UK value retained 79% (now 66%
 > for 2018 adverts, 90% for October 2022); the 0.958 correlation (a levels correlation; 0.90 as
-> 12-month changes). Current figures and their status: `../Case4_Audit.md`.
+> 12-month changes). Current figures and their status live in the project's audit record, which is not published here; every figure below is re-read from its report by `check_assumptions.py`.
 
 **Short answer:** yes, there are established ways to do this. The trick is to **not** throw every dataset into one big pile and train one model. Treat each dataset as a separate "study" of the same question ("what drives a car's value?"), then combine them in ways that respect their differences. The differences are country, year, currency, asking vs sale price, and which columns exist.
 
