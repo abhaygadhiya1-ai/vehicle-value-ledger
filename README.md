@@ -1,7 +1,9 @@
-# Follow the Euro, Car by Car
+# Vehicle Value Ledger
 
-The evidence behind our answer to **Case 4 — Data & AI Strategy for an Automotive Merger**
-(Capgemini L'Innovateur 9.0, Round 1).
+One record per car, across the new-car business, the captive finance arm and the used-car
+business. This is the evidence behind our answer to **Case 4 — Data & AI Strategy for an
+Automotive Merger** (Capgemini L'Innovateur 9.0, Round 1), presented as *Follow the Euro,
+Car by Car*.
 
 This repository is here so that every number on our slides can be checked. It holds the code,
 the analysis reports and the value-at-risk workbook. It does not hold the slides, and it does
