@@ -11,12 +11,14 @@ These are not listings. They are the yardsticks the value model measures against
                            price and the spread across that year's trims.
 - price_indices.parquet    Official second-hand car price indices, used to put prices from
                            different years on the same footing.
+- nl_transfer_hazard.parquet  How often a Dutch car of each age changes keeper, from RDW's
+                           own register: the base hazard of the readiness engine.
 - new_car_price_indices.parquet  The same HICP family for NEW cars (CP07111). Kept in its own
                            file, not added to price_indices.parquet: `latvia_time.py` selects
                            its series with `str.contains("Eurostat")` and a second Eurostat
                            series in that file would silently break it.
 
-Usage: .venv/bin/python build_reference.py [rdw|fipe|dvm|indices]
+Usage: .venv/bin/python build_reference.py [rdw|fipe|dvm|indices|newindices|nlhazard|nlmake]
 """
 import io
 import sys
@@ -26,7 +28,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from build_unified import MAKE_ALIASES, norm_name, strip_make
+from build_unified import MAKE_ALIASES, STELLANTIS, norm_name, strip_make
 from loaders.common import http_download
 
 HERE = Path(__file__).parent
@@ -254,9 +256,151 @@ def build_indices():
     return d.dropna(subset=["date"]).sort_values(["geo", "series", "date"], ignore_index=True)
 
 
+# ---------- RDW: how often a Dutch car changes hands, by age ----------
+
+STELLANTIS_NL = None  # filled by build_nl_hazard from RDW's own spelling of each make
+
+
+def rdw_group(select, where, group, limit=5_000):
+    """One server-side aggregation against the RDW register. Nothing is downloaded row by row:
+    the table holds 10.8m passenger cars and the machine has no room for them."""
+    r = requests.get(RDW_URL, params={"$select": select, "$where": where, "$group": group,
+                                      "$limit": limit}, timeout=900)
+    r.raise_for_status()
+    return pd.DataFrame(r.json())
+
+
+def build_nl_hazard():
+    """The base hazard of layer 1: the share of Dutch cars of each age that changed keeper in the
+    last twelve months.
+
+    RDW's open register carries, for every car, the date it was first admitted and the date the
+    *current* keeper took it on. So the numerator and the denominator come out of the same
+    official file, at single years of age, and neither is modelled.
+
+    Two cuts of the population, because both matter and they differ:
+
+      * `all`      - every car on the road, imports included. An imported used car necessarily
+                     registers a keeper change when it arrives, and imports are over a third of
+                     the parc at ages four to six, so this cut runs hot at exactly the ages the
+                     engine cares about.
+      * `domestic` - cars first put on Dutch plates when new. This is the population that behaves
+                     like a lease book, and it is the one the engine uses.
+
+    A first registration is not a keeper change, so it is excluded; without that, age 0 reads
+    100% by construction.
+    """
+    global STELLANTIS_NL
+    live = ("voertuigsoort='Personenauto' AND export_indicator='Nee' "
+            "AND tenaamstellen_mogelijk='Ja' AND datum_eerste_toelating_dt IS NOT NULL")
+    born_here = ("date_extract_y(datum_eerste_tenaamstelling_in_nederland_dt) "
+                 "= date_extract_y(datum_eerste_toelating_dt)")
+
+    latest = rdw_group("max(datum_tenaamstelling_dt) AS m", live, "")["m"].iloc[0]
+    end = pd.Timestamp(latest).normalize().replace(day=1)
+
+    # Two windows, not one. The register only ever shows the *current* keeper, so the twelve
+    # months before last are seen only through cars that have not moved since - censored, and
+    # `readiness_base.py` undoes that. It is worth the trouble: one window cannot tell an age
+    # effect from a cohort effect, and two can.
+    windows = {"latest": (end - pd.DateOffset(months=12), end),
+               "previous": (end - pd.DateOffset(months=24), end - pd.DateOffset(months=12))}
+
+    def moved_in(start, stop):
+        return (f"datum_tenaamstelling_dt >= '{start:%Y-%m-%d}T00:00:00.000' "
+                f"AND datum_tenaamstelling_dt < '{stop:%Y-%m-%d}T00:00:00.000' "
+                "AND datum_tenaamstelling_dt > datum_eerste_tenaamstelling_in_nederland_dt")
+
+    print(f"  nlhazard: windows {windows['previous'][0]:%Y-%m} / "
+          f"{windows['latest'][0]:%Y-%m} / {end:%Y-%m}", flush=True)
+
+    makes = rdw_group("merk,count(1) AS n", live, "merk", limit=50_000)
+    norm = norm_name(makes["merk"]).replace(MAKE_ALIASES)
+    STELLANTIS_NL = sorted(makes.loc[norm.isin(STELLANTIS), "merk"].dropna().unique())
+    quoted = ",".join("'" + m.replace("'", "''") + "'" for m in STELLANTIS_NL)
+    print(f"  nlhazard: {len(STELLANTIS_NL)} Stellantis spellings in RDW", flush=True)
+
+    year = "date_extract_y(datum_eerste_toelating_dt)"
+    # `all_ever` drops the "still on the road" filter. Its parc is not a fleet, so it is no use
+    # as a hazard, but its numerator is the right one to hold against a published count of sales:
+    # a car sold in November and exported in March was still a sale.
+    ever = "voertuigsoort='Personenauto' AND datum_eerste_toelating_dt IS NOT NULL"
+
+    rows = []
+    for population, pop_where in (("all", live), ("domestic", f"{live} AND {born_here}"),
+                                  ("all_ever", ever)):
+        for brands, brand_where in (("all", pop_where),
+                                    ("stellantis", f"{pop_where} AND merk IN ({quoted})")):
+            parc = rdw_group(f"{year} AS y,count(1) AS n", brand_where, "y", limit=200)
+            for window, (start, stop) in windows.items():
+                movers = rdw_group(f"{year} AS y,count(1) AS n",
+                                   f"{brand_where} AND {moved_in(start, stop)}", "y", limit=200)
+                m = dict(zip(movers["y"].astype(int), movers["n"].astype(int)))
+                for y, n in zip(parc["y"].astype(int), parc["n"].astype(int)):
+                    rows.append({"population": population, "brands": brands, "window": window,
+                                 "window_start": start, "window_end": stop, "reg_year": y,
+                                 "age_years": end.year - y, "parc": n, "movers": m.get(y, 0)})
+            print(f"  nlhazard: {population}/{brands} {parc['n'].astype(int).sum():,} cars",
+                  flush=True)
+
+    # the official new price of the cars of each vintage that are actually still on the road.
+    # `readiness_value.py` needs it, and taking it here keeps that analysis offline.
+    priced = rdw_group(f"{year} AS y,median(catalogusprijs) AS med,count(1) AS n",
+                       f"{live} AND {born_here} AND catalogusprijs IS NOT NULL "
+                       "AND catalogusprijs > 2000", "y", limit=200)
+    newp = dict(zip(priced["y"].astype(int), priced["med"].astype(float)))
+
+    d = pd.DataFrame(rows)
+    d["rate"] = d["movers"] / d["parc"]
+    d["new_price_eur"] = d["reg_year"].map(newp)
+    return d.sort_values(["population", "brands", "window", "age_years"], ignore_index=True)
+
+
+def build_nl_by_make():
+    """The same keeper-change rate, but split by make within each registration year.
+
+    Layer 1 says a five-year-old car is the likeliest to move. That is an average, and an average
+    over makes is not a prediction about a car: this table is what the spread inside one age looks
+    like, which is the whole reason a model is needed on top of the curve.
+    """
+    live = ("voertuigsoort='Personenauto' AND export_indicator='Nee' "
+            "AND tenaamstellen_mogelijk='Ja' AND datum_eerste_toelating_dt IS NOT NULL")
+    born_here = ("date_extract_y(datum_eerste_tenaamstelling_in_nederland_dt) "
+                 "= date_extract_y(datum_eerste_toelating_dt)")
+    latest = rdw_group("max(datum_tenaamstelling_dt) AS m", live, "")["m"].iloc[0]
+    end = pd.Timestamp(latest).normalize().replace(day=1)
+    start = end - pd.DateOffset(months=12)
+    moved = (f"datum_tenaamstelling_dt >= '{start:%Y-%m-%d}T00:00:00.000' "
+             f"AND datum_tenaamstelling_dt < '{end:%Y-%m-%d}T00:00:00.000' "
+             "AND datum_tenaamstelling_dt > datum_eerste_tenaamstelling_in_nederland_dt")
+    year = "date_extract_y(datum_eerste_toelating_dt)"
+    where = f"{live} AND {born_here} AND {year} >= {end.year - 20}"
+
+    parc = rdw_group(f"merk,{year} AS y,count(1) AS n", where, f"merk,{year}", limit=5000)
+    mov = rdw_group(f"merk,{year} AS y,count(1) AS n", f"{where} AND {moved}",
+                    f"merk,{year}", limit=5000)
+    key = lambda d: list(zip(d["merk"], d["y"].astype(int)))
+    m = dict(zip(key(mov), mov["n"].astype(int)))
+    d = pd.DataFrame({
+        "merk": parc["merk"],
+        "reg_year": parc["y"].astype(int),
+        "parc": parc["n"].astype(int),
+    })
+    d["age_years"] = end.year - d["reg_year"]
+    d["movers"] = [m.get(k, 0) for k in key(parc)]
+    d["rate"] = d["movers"] / d["parc"]
+    d["make"] = norm_name(d["merk"]).replace(MAKE_ALIASES)
+    d["is_group"] = d["make"].isin(STELLANTIS)
+    d["window_start"], d["window_end"] = start, end
+    print(f"  nlmake: {len(d):,} make-year cells, {d['parc'].sum():,} cars")
+    return d.sort_values(["age_years", "rate"], ascending=[True, False], ignore_index=True)
+
+
 BUILDERS = {"rdw": ("rdw_new_prices", build_rdw), "fipe": ("fipe_history", build_fipe),
             "dvm": ("dvm_new_prices", build_dvm), "indices": ("price_indices", build_indices),
-            "newindices": ("new_car_price_indices", build_new_indices)}
+            "newindices": ("new_car_price_indices", build_new_indices),
+            "nlhazard": ("nl_transfer_hazard", build_nl_hazard),
+            "nlmake": ("nl_transfer_by_make", build_nl_by_make)}
 
 
 def main(names):

@@ -1,0 +1,9 @@
+index,what,unit,effect,se,t,label
+our quality-adjusted index,Median age on sale,years per 10% of price,0.4494179801698799,0.11047960462228601,4.067881865674446,"Median age on sale, against our quality-adjusted index"
+our quality-adjusted index,Share aged 15+,points per 10%,0.03871886947654041,0.0031790105789269787,12.179534643011257,"Share aged 15+, against our quality-adjusted index"
+our quality-adjusted index,Median mileage on sale,km per 10% of price,5685.736514472249,574.9596135001536,9.888931989256546,"Median mileage on sale, against our quality-adjusted index"
+our quality-adjusted index,"Share over 250,000 km",points per 10%,0.0279180416152376,0.003269643473325773,8.53855836056654,"Share over 250,000 km, against our quality-adjusted index"
+Eurostat's official index,Median age on sale,years per 10% of price,0.7093850305087841,0.19083441564853207,3.717280387282391,"Median age on sale, against Eurostat's official index"
+Eurostat's official index,Share aged 15+,points per 10%,0.06565716534409649,0.005198067891216535,12.631071143768834,"Share aged 15+, against Eurostat's official index"
+Eurostat's official index,Median mileage on sale,km per 10% of price,9979.538613730469,852.8911761812686,11.700834634510834,"Median mileage on sale, against Eurostat's official index"
+Eurostat's official index,"Share over 250,000 km",points per 10%,0.04988624489595972,0.004790195400007632,10.414240073772406,"Share over 250,000 km, against Eurostat's official index"

@@ -24,6 +24,14 @@ European), 425,974 sale and 94,194 auction prices. `drivers.py` fits 16 datasets
 **Checked and left alone, with the reason:**
 - `lv_ss` repeats cars month to month: a monthly panel with no advert id, known and documented.
 - `eu_2025_11`: 839 groups of identical cars listed in more than one country (AutoScout24 cross-listing); which country is right cannot be told.
+- **`eu_2025_11`'s Dutch subset is premium dealer stock, not a market** (found 2026-09-21). Its
+  median asking price is **EUR 99,950 for a two-year-old car** on 483 adverts and the curve is not
+  monotone in age. Pricing the Dutch used-car flow from it gives **EUR 30.9bn against EUR 13.0bn**
+  from official catalogue prices - a 2.4x overstatement. Adverts per car on the road correlate with
+  the register at rho **0.14**. **Do not use it for a national price level.** Its *retention ratio*
+  does survive, because the same bias sits in the advert price and the catalogue price and divides
+  out. This is the listings collection's general shape: good pooled across many sources, bad as a
+  level in one country.
 - `es_2020_11`, `se_2022`, `id_2025`, `nz_findcars`: repeated attribute sets with different advert ids or dates - reposts or identical dealer stock, not provably duplicates.
 - `us_wa_ev_sales`: repeats are new EVs sold at list price with delivery miles; the analyses use used sales only.
 - `nz_findcars` is labelled `asking` but is a damaged-vehicle auction that also lists trailers and motorcycles; it has no mileage and no analysis uses it.
@@ -200,6 +208,8 @@ These are not listings. They are the yardsticks the value model measures against
 | `dvm_new_prices.parquet` | 6,333 UK model-years, 1998–2021: the entry price plus the min, median and max across that year's trims | DVM-CAR |
 | `rdw_new_prices.parquet` | Dutch official new-car catalogue price by make, model and registration year, aggregated on RDW's server from 8,863,469 priced passenger cars | [RDW](https://opendata.rdw.nl/Voertuigen/Open-Data-RDW-Gekentekende_voertuigen/m9d7-ebf2) |
 | `fipe_history.parquet` | Brazil's official FIPE monthly valuation by model and model year, including the 0 km price | [fipeX](https://huggingface.co/datasets/alanwgt/fipex-veiculos-brasil) |
+| `nl_transfer_hazard.parquet` | **Added 2026-09-21 for the readiness engine.** How often a Dutch car of each age changes keeper, and the official new price of the vintages still on the road. 1,376 rows: three populations (all, domestic-registered, including cars since exported) x two brand sets (all, the group's) x two twelve-month windows x single years of age. Numerator and denominator come out of the same register, so the hazard is a count over a count | [RDW](https://opendata.rdw.nl/Voertuigen/Open-Data-RDW-Gekentekende_voertuigen/m9d7-ebf2), CC0 |
+| `uk_mot_panel.parquet` | **Added 2026-09-21 for `analysis/readiness_model.py`.** A quarter-sample of UK cars tested in March 2024 with ten fields and a label - whether the car was ever tested again through July 2025. The only public per-car replacement outcome anywhere in the collection | [DVSA](https://open.data.dvsa.gov.uk/mot-anonymised/index.html), OGL v3.0 |
 
 **The reference tables join to the listings**, and the match rates are measured rather than assumed
 (`analysis/value_retained.py`): **UK 69.9%**, **Netherlands 65.0%**, **Brazil 59.4%**, US 100%
@@ -213,6 +223,35 @@ match rate from 52% to 64% and the Dutch from 52% to 65%.
 `CP071120` both return an empty dimension. The live code under COICOP 2018 is **`CP07112`**
 ("Second-hand motor cars"), unit `I15` (2015=100), on dataset `prc_hicp_midx`. The INSEE series
 001763645 is labelled "Séries arrêtées" but still returns data to December 2025.
+
+## Streamed, never stored: UK DVSA anonymised MOT (added 2026-09-21)
+
+The readiness engine's layer 2 and its learned model both need a fleet-wide odometer, and the UK
+MOT register is the only European source that publishes one. It is **not** in `data/` and never
+will be: the 2024 and 2025 releases are **4.5 GB each**. `mot_stream.py` serves byte ranges to
+Python's `zipfile` so only what is read is fetched, and nothing but the small panel above is
+written to disk.
+
+| What | Detail |
+|---|---|
+| Coverage | Every MOT test in Great Britain, 2005 to 2025. ~38m tests a year |
+| Fields | test and vehicle id, date, class, type, result, **odometer**, postcode area, make, model, colour, fuel, engine size, date of first use |
+| Licence | Open Government Licence v3.0 |
+| Identity | `vehicle_id` is derived from the registration and the VIN and **is stable across releases** - verified in `analysis/readiness_mot_id_report.md` |
+
+**Three things about the files that cost time:**
+
+- **The releases are not one format.** 2024 and 2025 are comma-separated, carry a `completed_date`
+  and are split into **stored** monthly members, so any month can be range-read on its own. 2022
+  and 2023 are **pipe-separated, 14 columns, deflate64**, one member each, **sorted by test date** -
+  so a prefix of those is a January sample, not a random one. Deflate64 needs `zipfile-deflate64`.
+- **The May 2025 release of test year 2024 is heavily duplicated** - 1,520,095 rows for 957,030
+  distinct tests in one month. The June 2026 release is clean. Use the newer one.
+- **`vehicle_id` must never be sampled on directly.** It is stable but not a uniform hash, and its
+  structure tracks the car: even ids are 31.8% of the file and average **16.3 years and 101,410
+  miles** against **6.9 years and 51,667** for odd ids. Ids *are* uniform mod 3 and mod 5, so a
+  count check passes and an attribute check is the one that catches it. `readiness_model.mix()` is
+  a splitmix64 of the id and samples cleanly.
 
 ## What the data supported (analysis, 2026-09-17)
 

@@ -27,6 +27,9 @@ case4-value-model/analysis/*
 !case4-value-model/analysis/*.py
 !case4-value-model/analysis/*.md
 !case4-value-model/analysis/*.csv
+# readiness_mileage_facts.json: the scalars the layer 2 report needs to be rebuilt without
+# re-streaming 4.6 GB of MOT data. Added deliberately; it is the only json published.
+!case4-value-model/analysis/*.json
 
 !case4-value-model/loaders/
 case4-value-model/loaders/*

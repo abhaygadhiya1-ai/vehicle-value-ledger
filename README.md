@@ -87,6 +87,59 @@ the work went into showing why, and then finding a way round it.
 
 Full working: [`analysis/discount_passthrough_report.md`](case4-value-model/analysis/discount_passthrough_report.md).
 
+### When a car comes back: the readiness engine
+
+A second engine, built the same way. `value_engine.py` says what a car is worth;
+`readiness_engine.py` says when it becomes a transaction. The base rate comes from the Dutch RDW
+register, which records for every car both its first admission and the date its **current keeper**
+took it on — so the share of cars of each age that changed hands in the last twelve months is a
+count over a count, out of one official file, at single years of age.
+
+| Claim | Figure | Caveat |
+|---|---|---|
+| Replacement is not flat in age — it peaks at five years | **27.8%** of five-year-old Dutch cars change keeper in a year against **15.1%** at nine. **1.84×** | Dutch; a keeper change is not a customer deciding to replace |
+| The peak is an age effect, not a lucky cohort | The register's previous twelve months, uncensored, put the peak at **five years too**, correlation **0.94** across ages | The un-censoring assumes one year is independent of the next |
+| It matches a count made by somebody else | **1,931,085** keeper changes against BOVAG and RDC's published **2,124,429** Dutch used-car sales: **−9.1%** | Low in the direction the method predicts; treat the level as good to about ten per cent |
+| **Mileage predicts disposal, not sale** | Twice a cohort's mileage makes a car **1.54×** as likely to leave the UK fleet and **1.03×** as likely to be advertised | 3,039,129 MOT-tracked cars; "not tested again" mixes scrappage, export and laid up |
+| **There is no contract-end spike to find** | Excess adverts at 36 months: **−16.9%** (−31.4% to +0.7%), negative in all twelve specifications tried | Three European sources that record a registration month |
+
+### Is any of it actually a model?
+
+The two layers above are a measured rate times a measured multiplier — traceable, and not learning
+anything. So we built the learned version on the only public data with a **per-car outcome**:
+759,541 UK cars tested in March 2024 and looked for again through July 2025.
+
+**It is built in tiers, and that is the design point.** Each tier is what a company knows at a
+stage of joining its data up. Adding a tier is one line.
+
+| Tier | AUC | **Same-age AUC** | Leavers in the top tenth |
+|---|---|---|---|
+| Age alone | 0.664 | 0.500 | 2.49× |
+| + how far it has gone | 0.698 | 0.618 | 2.92× |
+| + what the car is | 0.709 | 0.643 | 3.20× |
+| + where it is, and how it just did | 0.712 | 0.648 | 3.20× |
+| **+ last year's test** | **0.723** | **0.667** | **3.34×** |
+
+**Read the same-age column.** A call list is built from cars of similar age, so the question is
+whether the model can tell one twelve-year-old from another — and there, what the car *is* matters:
+at twelve years old the share leaving the fleet runs from **5.3% for a Golf to 12.9% for an Astra**.
+A global AUC hides that, because age already separates most pairs.
+
+**The last tier is the proof.** A year of prior test history — the public stand-in for a service
+record — arrived after the model was built and cost one line. Boosted trees beat a neural network
+(0.723 to 0.703), and the model is calibrated within 0.8 points across all ten risk deciles.
+
+**Its weakest slice is the one that matters.** AUC **0.615** on cars aged three to six, against
+0.717 on eleven-to-fifteens. Public data can see why an old car dies — mileage, a failed test.
+It cannot see why a young one changes hands, because that is a contract date and an equity
+position. **The engine is weakest exactly where the company's own data would be strongest**, and
+that is where the next tier goes.
+
+That last one is the point. A three-year lease ending leaves no trace in any public advert — cars
+come back, sit in a compound, get prepared, and reach a forecourt over the following weeks. **The
+third layer of a replacement model exists only in the company's own contract dates**, and that is
+now a measurement rather than an assertion.
+
 ### Results that are usefully negative
 
 We state these rather than hiding them.
@@ -97,6 +150,21 @@ We state these rather than hiding them.
   all between −13.2% and −11.7% a year. The level moved instead.
 - **One claim we withdrew after auditing ourselves.** We had argued that what transfers between
   markets is market coverage rather than row count. Inside Europe it does not hold.
+- **Uplift modelling did not beat an ordinary response model** on the one public trial with a
+  genuinely randomised treatment (Hillstrom, 64,000 customers). Top-decile uplift **+8.6%**
+  against **+8.9%** — a gap of −0.14 points, range −3.4 to +2.9. Every model beat sending at
+  random; which model was used did not separate. So the recommendation is to build the
+  measurement first and let it decide, not to assume the technique pays.
+- **Nothing public predicts which car comes to *market*, beyond its age.** Two independent
+  methods agree: a mileage elasticity of 1.03× per doubling, and a classifier free to use make and
+  fuel that gains **+0.009** from the odometer. Getting there needed one artefact closed first —
+  **30.9% of advert mileages are exact multiples of a thousand miles against 0.11% of MOT
+  readings**, so a classifier can identify the *file* from the digits and score a meaningless
+  0.737.
+- **Our own listings cannot price one national market.** Asked for the value of the cars changing
+  hands in the Netherlands, our Dutch adverts say €30.9bn and official catalogue prices say
+  €13.0bn — a 2.4× overstatement, because that scrape is premium dealer stock. Pooled across many
+  sources our listings give good shapes; in one country they give a bad level.
 
 ---
 
@@ -126,6 +194,14 @@ cd case4-value-model
 for s in drivers lodo curve tesla_event latvia_time value_retained price_types \
          level_risk one_car what_matters field_sets engine_check one_model_gbm \
          discount_passthrough; do .venv/bin/python analysis/$s.py; done
+.venv/bin/python build_reference.py nlhazard      # Dutch keeper-change hazard by age
+.venv/bin/python analysis/readiness_mot_id.py     # is the MOT vehicle id stable across releases?
+.venv/bin/python analysis/readiness_base.py       # readiness layer 1
+.venv/bin/python analysis/readiness_mileage.py    # layer 2 — ~25 min, streams 4.6 GB, stores none
+.venv/bin/python analysis/readiness_events.py     # layer 3, the negative
+.venv/bin/python analysis/readiness_market.py     # layer 4
+.venv/bin/python analysis/readiness_value.py      # readiness x value
+.venv/bin/python analysis/uplift_engine.py        # the uplift engine
 .venv/bin/python check_assumptions.py  # every figure traces to its stated source
 .venv/bin/python build_var_model.py    # rebuilds the workbook
 .venv/bin/python audit_workbook.py     # 574 independent checks
@@ -142,6 +218,8 @@ write CSVs that `level_risk` reads, and `level_risk` writes one that `what_matte
 | `case4-value-model/analysis/` | one script and one report per question |
 | `case4-value-model/assumptions.csv` | every input with its tier, source, anchor and caveat |
 | `case4-value-model/value_engine.py` | `predict_value()` — a value, an 80% band, and which uncertainty drives the band |
+| `case4-value-model/readiness_engine.py` | `readiness()` — the chance a car comes to market, and `rank()` for a whole book |
+| `case4-value-model/mot_stream.py` | reads the 4.5 GB UK MOT archives over HTTP range requests, storing none of it |
 | `case4-value-model/DATASETS.md` | every dataset found, used or rejected, with reasons |
 | `case4-value-model/METHODOLOGY_multi_dataset.md` | how many datasets are combined, step by step, each with its result |
 
