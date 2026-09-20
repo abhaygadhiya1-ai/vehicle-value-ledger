@@ -1,0 +1,6 @@
+id,label,value,se
+dpt_percar,Resale value lost per 1% deeper deal at the new sale,0.3,0.031
+dpt_percar_10,Resale value lost for a 10% deeper deal (%),3.1,
+dpt_placebo,Placebo: the same model's deal 12 months later,0.033,0.05
+dpt_market_lags,Eurostat: everything after the new-price move,-0.013,
+dpt_market_leads,Eurostat: everything before it,0.056,

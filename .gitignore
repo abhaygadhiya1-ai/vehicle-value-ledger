@@ -1,0 +1,33 @@
+# Allowlist. Nothing is published unless it is named below.
+#
+# Deliberately NOT here:
+#   case4-value-model/data/    2.9 GB of raw listings plus the 97 MB unified table. Several
+#                              sources carry no licence or a research-only one (see
+#                              case4-value-model/DATASETS.md, "Licence to check before
+#                              publishing"), so none of it is redistributed. download_data.py
+#                              and build_reference.py rebuild all of it from the original sources.
+#   Case Study *.pdf           Capgemini's own competition material; not ours to republish.
+#   internal working notes     the audit, the handoff, the storyline and the methods note.
+/*
+!.gitignore
+!README.md
+!LICENSE
+!Case4_Value_at_Risk.xlsx
+
+!case4-value-model/
+case4-value-model/*
+!case4-value-model/*.py
+!case4-value-model/requirements.txt
+!case4-value-model/assumptions.csv
+!case4-value-model/DATASETS.md
+!case4-value-model/METHODOLOGY_multi_dataset.md
+
+!case4-value-model/analysis/
+case4-value-model/analysis/*
+!case4-value-model/analysis/*.py
+!case4-value-model/analysis/*.md
+!case4-value-model/analysis/*.csv
+
+!case4-value-model/loaders/
+case4-value-model/loaders/*
+!case4-value-model/loaders/*.py
