@@ -103,13 +103,25 @@ AUC runs **0.615 to 0.749** across slices against 0.723 overall, and the weakest
 
 The five highest-scoring cars in the held-out set, with why:
 
-| Score | Car | Why |
+| Score | Car | Why the model says so |
 |---|---|---|
-| 69% | Ford, 281,667 km | 18 years old; driven 67% above cars of its age; and 597% harder over the last year; failed this test |
-| 67% | Peugeot, 173,241 km | 20 years old; driven about average for its age; and 502% harder over the last year; failed this test; Peugeot leaves the fleet more often than average |
-| 67% | Peugeot, 204,983 km | 20 years old; driven 22% above cars of its age; failed this test; Peugeot leaves the fleet more often than average |
-| 67% | Renault, 229,226 km | 19 years old; driven 36% above cars of its age; and 515% harder over the last year; failed this test; Renault leaves the fleet more often than average |
-| 66% | Audi, 286,897 km | 20 years old; driven 71% above cars of its age |
+| 69% | Ford, 281,667 km | 18 years old; driven 67% above cars its age; and 7.0x their yearly rate in the last year; failed this test |
+| 67% | Peugeot, 173,241 km | 20 years old; about average mileage for its age; and 6.0x their yearly rate in the last year; failed this test; Peugeots leave the fleet more often than average |
+| 67% | Peugeot, 204,983 km | 20 years old; driven 22% above cars its age; failed this test; Peugeots leave the fleet more often than average |
+| 67% | Renault, 229,226 km | 19 years old; driven 36% above cars its age; and 6.1x their yearly rate in the last year; failed this test; Renaults leave the fleet more often than average |
+| 66% | Audi, 286,897 km | 20 years old; driven 71% above cars its age |
+
+Those are all old cars, because that is what the model is best at. **The same five, restricted to the ages a lease book actually holds:**
+
+| Score | Car | Why the model says so |
+|---|---|---|
+| 38% | Vauxhall, 319,750 km | 6 years old; 4.7x the mileage of cars its age; and 5.9x their yearly rate in the last year; Vauxhalls leave the fleet more often than average |
+| 33% | Jaguar, 184,001 km | 6 years old; 2.7x the mileage of cars its age; and 78% harder in the last year |
+| 31% | Vauxhall, 317,394 km | 6 years old; 4.6x the mileage of cars its age; and 6.4x their yearly rate in the last year; failed this test; Vauxhalls leave the fleet more often than average |
+| 29% | Nissan, 160,367 km | 5 years old; 2.9x the mileage of cars its age; and 3.7x their yearly rate in the last year; failed this test |
+| 28% | Jaguar, 188,974 km | 6 years old; 2.8x the mileage of cars its age; and 91% harder in the last year |
+
+The scores are far lower and the reasons thinner, which is the honest picture: on a four-year-old, public data has little to say beyond mileage. That is the gap the group's contract dates close.
 
 ## What it is not
 

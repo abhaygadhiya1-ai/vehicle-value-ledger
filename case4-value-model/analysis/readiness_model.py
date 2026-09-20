@@ -349,35 +349,42 @@ def by_slice(te, y, p, levels):
     return pd.DataFrame(rows)
 
 
-def reasons(te, p, levels, fail_rate, k=5):
+def reasons(te, p, levels, fail_rate, k=5, ages=None, label=""):
     """A plain-words reason for the highest-scoring cars.
 
     The solution document promises this and nothing delivered it: "a score nobody can explain will
     not be used by a dealer, and an unused model is worth nothing". Each reason is stated against
-    the car's own age cohort, which is the comparison a person actually makes.
+    the car's own age cohort, which is the comparison a person actually makes. Large ratios are
+    said as multiples - "3.4x the yearly mileage of cars its age" reads; "240% harder" does not.
     """
+    sel = np.ones(len(te), bool) if ages is None else te["age"].between(*ages).to_numpy()
+    order = [i for i in np.argsort(-p) if sel[i]][:k]
     out = []
-    for i in np.argsort(-p)[:k]:
+    for i in order:
         row = te.iloc[i]
         make = levels["make"][int(row["make"])]
         bits = [f"{int(row['age'])} years old"]
         r = float(row["km_ratio"])
-        if r >= 1.15:
-            bits.append(f"driven {r - 1:.0%} above cars of its age")
+        if r >= 2:
+            bits.append(f"{r:.1f}x the mileage of cars its age")
+        elif r >= 1.15:
+            bits.append(f"driven {r - 1:.0%} above cars its age")
         elif r <= 0.85:
-            bits.append(f"driven {1 - r:.0%} below cars of its age")
+            bits.append(f"driven {1 - r:.0%} below cars its age")
         else:
-            bits.append("driven about average for its age")
+            bits.append("about average mileage for its age")
         rate = row.get("km_rate_ratio")
-        if pd.notna(rate) and rate >= 1.25:
-            bits.append(f"and {rate - 1:.0%} harder over the last year")
+        if pd.notna(rate) and rate >= 2:
+            bits.append(f"and {rate:.1f}x their yearly rate in the last year")
+        elif pd.notna(rate) and rate >= 1.25:
+            bits.append(f"and {rate - 1:.0%} harder in the last year")
         if levels["result"][int(row["result"])] == "F":
             bits.append("failed this test")
         mk = fail_rate.get(int(row["make"]))
         if mk is not None and mk > fail_rate["__all__"] * 1.15:
-            bits.append(f"{make.title()} leaves the fleet more often than average")
+            bits.append(f"{make.title()}s leave the fleet more often than average")
         out.append({"Score": f"{p[i]:.0%}", "Car": f"{make.title()}, {int(row['km']):,} km",
-                    "Why": "; ".join(bits)})
+                    "Why the model says so": "; ".join(bits)})
     return pd.DataFrame(out)
 
 
@@ -558,6 +565,15 @@ def main():
         "The five highest-scoring cars in the held-out set, with why:",
         "",
         md_table(reasons(te, p_model, levels, fail_rate)),
+        "",
+        "Those are all old cars, because that is what the model is best at. **The same five, "
+        "restricted to the ages a lease book actually holds:**",
+        "",
+        md_table(reasons(te, p_model, levels, fail_rate, ages=(3, 6))),
+        "",
+        "The scores are far lower and the reasons thinner, which is the honest picture: on a "
+        "four-year-old, public data has little to say beyond mileage. That is the gap the "
+        "group's contract dates close.",
         "",
         "## What it is not",
         "",
