@@ -4,7 +4,8 @@ These are not listings. They are the yardsticks the value model measures against
 
 - rdw_new_prices.parquet   Dutch official new-car catalogue price (catalogusprijs) by make,
                            model and first-registration year. Aggregated on RDW's own server,
-                           because the source table holds 8.9m priced passenger cars.
+                           because the source table holds 8.9m priced passenger cars. One row
+                           per key: spellings that clean to one name are merged.
 - fipe_history.parquet     Brazil's FIPE table: the official monthly valuation of each model
                            and model year, including the 0 km (new) price.
 - dvm_new_prices.parquet   UK new-car prices by model and year from DVM-CAR, both the entry
@@ -89,7 +90,31 @@ def build_rdw():
         "new_price_min_eur": pd.to_numeric(d["price_min"]),
         "new_price_max_eur": pd.to_numeric(d["price_max"]),
     })
-    return out.sort_values(["make", "model", "year"], ignore_index=True)
+    return merge_spellings(out).sort_values(["make", "model", "year"], ignore_index=True)
+
+
+def merge_spellings(out):
+    """One row per make / model / year. RDW spellings that clean to one name ("FIAT 500" and
+    "500", "A3 40 TFSIE" and "A3 40 TFSIe", "E-TRON" and "E TRON") each come back as their own
+    group, often at very different prices, and a listing joined on the cleaned name matched every
+    one of them. A listing only carries the cleaned name, so it gets one price for all the cars
+    behind it: the spellings' medians weighted by their car counts. The true median of the
+    combined cars always lies between the spellings' medians, which bounds the error.
+    `n_spellings` above 1 marks a row where that approximation was made."""
+    key = ["make", "model", "year"]
+    g = out.assign(med_n=out["new_price_eur"] * out["n"],
+                   avg_n=out["new_price_avg_eur"] * out["n"]).groupby(key, dropna=False)
+    n = g["n"].sum()
+    merged = pd.DataFrame({
+        "n": n,
+        "new_price_eur": (g["med_n"].sum() / n).round(2),
+        "new_price_avg_eur": (g["avg_n"].sum() / n).round(2),
+        "new_price_min_eur": g["new_price_min_eur"].min(),
+        "new_price_max_eur": g["new_price_max_eur"].max(),
+        "n_spellings": g.size(),
+    }).reset_index()
+    assert not merged.duplicated(key).any() and merged["n"].sum() == out["n"].sum()
+    return merged
 
 
 # ---------- FIPE: Brazilian official valuations ----------

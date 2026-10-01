@@ -9,7 +9,7 @@ Price levels do not compare across countries, but the share of the original list
 | market | reference | listings | matched | match rate |
 |---|---|---|---|---|
 | UK | DVM-CAR entry price | 648,285 | 461,318 | 71.2% |
-| NL | RDW catalogue price | 12,269 | 7,977 | 65.0% |
+| NL | RDW catalogue price | 10,611 | 6,319 | 59.6% |
 | US | Marketcheck MSRP | 690 | 690 | 100.0% |
 | BR | FIPE 0 km valuation | 5,551,998 | 3,296,801 | 59.4% |
 
@@ -21,17 +21,17 @@ Match rates matter more than the curve here. A listing only gets a new price if 
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | UK 2018 | DVM-CAR entry price | 191569 | 91% | 78% | 66% | 59% | 52% | 45% | 40% | 36% | 33% | 25% |
 | UK Oct 2022 | DVM-CAR entry price | 266556 | 122% | 112% | 90% | 84% | 76% | 67% | 60% | 52% | 45% | 39% |
-| NL | RDW catalogue price | 5681 | 83% | 68% | 62% | 56% | 46% | 45% | 40% | 39% | 36% | 26% |
+| NL | RDW catalogue price | 5304 | 82% | 68% | 60% | 55% | 48% | 45% | 39% | 39% | 36% | 27% |
 | US | Marketcheck MSRP | 689 | 84% | 69% | 68% | 66% | 59% | 50% | 51% | 42% | 41% | 38% |
 | BR | FIPE 0 km valuation | 2577590 | 85% | 81% | 76% | 73% | 70% | 67% | 64% | 60% | 58% | 55% |
 
 ## What it shows
 
-- **At three years old a car keeps roughly 66% (UK, 2018 adverts), 62% (NL), 68% (US) and 76% (BR) of its original list price.** Four different countries, four different reference sources, four different currencies, and the same broad answer.
-- By five years the figures are 52%, 46%, 59% and 70%.
+- **At three years old a car keeps roughly 66% (UK, 2018 adverts), 60% (NL), 68% (US) and 76% (BR) of its original list price.** Four different countries, four different reference sources, four different currencies, and the same broad answer.
+- By five years the figures are 52%, 48%, 59% and 70%.
 - **The UK's two snapshots show the level move directly.** The same three-year-old share was 66% in the DVM adverts (95% of them from 2018) and 90% in October 2022, +24 points, at the height of the shortage. That is the market-wide version of the Corsa in `one_car_report.md`, with the same caveat: two different scrapes, so part of the gap is a difference of source. Pooling the two would blend eras and bend the curve, because the older ages come mostly from 2022 and the younger mostly from 2018.
 - This is the same lesson as the rest of the analysis: **the shape travels, the level does not.** A Dutch car and a Brazilian car cost wildly different amounts and lose value at a broadly similar rate as a share of what they cost new.
-- **It is broadly consistent with the regressions, which are built quite differently.** Reading an annual rate off the ten-year share gives UK 2018 -12.9%, UK Oct 2022 -9.0%, NL -12.6%, US -9.2%, BR -5.8% a year. `analysis/drivers_report.md` never sees a new price and works from the slope of log price against age with mileage held fixed; these shares include the mileage cars actually accumulate and the gap from an entry-trim or tax-inclusive list price, so they need not match it exactly.
+- **It is broadly consistent with the regressions, which are built quite differently.** Reading an annual rate off the ten-year share gives UK 2018 -12.9%, UK Oct 2022 -9.0%, NL -12.3%, US -9.2%, BR -5.8% a year. `analysis/drivers_report.md` never sees a new price and works from the slope of log price against age with mileage held fixed; these shares include the mileage cars actually accumulate and the gap from an entry-trim or tax-inclusive list price, so they need not match it exactly.
 
 ## Limits worth stating before this goes on a slide
 

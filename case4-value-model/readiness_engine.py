@@ -5,7 +5,7 @@ move. Together they are the two halves of a vehicle value ledger: what the asset
 when it becomes a transaction.
 
     readiness(age_years=5, mileage_km=120_000)
-    -> {"probability": 0.33, "low": 0.29, "high": 0.37, ...}
+    -> {"probability": 0.30, "low": 0.30, "high": 0.31, ...}
 
 Two layers, each measured, each with its own report:
 
@@ -22,15 +22,30 @@ mileage multiplier sits near 1; `event="fleet_exit"` gives the strong one, and a
 question. **Ranking a customer list by mileage surfaces cars about to be scrapped, not customers
 about to buy.**
 
+**Does it transfer? The disposal half does (X11).** Finland's register, followed across three yearly
+snapshots, gives the same gradient for leaving traffic use. For cars of 10-20 years, which both countries
+inspect yearly, the Finnish and UK figures are about one standard error apart (`analysis/fi_exit_report.md`).
+It is steeper for cars that stay gone than for cars laid up and back a year later. The sale half stays
+UK-only, because no Finnish car adverts are in hand. The multiplier is unchanged: Finland supports the
+`fleet_exit` event and leaves the `to_market` default where it is.
+
 The two compose cleanly because layer 2 is normalised to average 1 over the fleet's own mileage
 distribution. A car on exactly its cohort's mileage gets layer 1 unchanged, and the multiplier can
 move one car without moving the total.
 
-**Layer 3 is missing on purpose.** A forcing event - a contract ending, a warranty expiring - is
-the third thing that should be in here, and `HANDOFF.md` records the measurement showing it cannot
-be recovered from public data: across 300,096 European adverts with a real registration month, the
-excess over trend at 36 months is +0.0%. That is not a gap in this file. It is the argument for
-the ledger, because the group's own contract dates are the only place the third layer exists.
+**Layer 3, the timing (on by default; `timing=False` turns it off)** - `analysis/lease_timing.py`.
+Adverts showed no bulge at contract ends, because remarketing smears the date. The Dutch register,
+which dates each keeper change itself, shows waves at 48 and 60 months and none at 36
+(`analysis/lease_end.py`). The monthly curve predicted a holdout year far better than the yearly
+one, so it is a layer: a within-year shape, the monthly hazard over the yearly view at the same age,
+applied on the ages the holdout tested (13 to 108 months) and 1 elsewhere. Layer 1 still sets the
+level; layer 3 moves probability into the months where cars come back. **Back-tested as the engine's
+own answer** (the report's last section): built from the training year only, it beat the engine
+without it on the holdout year at both 3 and 12 months, in mean and worst-age error. A version taking
+the level from the monthly curve too did not beat it on average, so it was not adopted. Limits: over a
+full year, the shape does not average exactly to 1, and past a wave (about 72 months) the answer still
+runs high, because layer 1's calendar-year ages blur the wave into the next year. The group's own
+contract dates remain the exact version of this layer, and the argument for the ledger.
 
 **What this predicts is that a car comes to market, not that a customer is ready to replace.**
 Those are different events and the public data can only see the first.
@@ -59,6 +74,8 @@ HERE = Path(__file__).parent
 BASE = HERE / "analysis" / "readiness_base_hazard.csv"
 EFFECT = HERE / "analysis" / "readiness_mileage_effect.csv"
 ELASTICITY = HERE / "analysis" / "readiness_mileage_elasticity.csv"
+TIMING = HERE / "analysis" / "lease_timing_curve.csv"
+TIMING_TESTED = (13, 108)  # the months of age the holdout test covered (`analysis/lease_timing.py`)
 
 DEFAULT_EVENT = "to_market"
 DRAWS = 4_000
@@ -96,6 +113,17 @@ class ReadinessEngine:
         # deciles are equal-sized, so the fleet average of the multiplier is their mean
         self.normaliser = float(np.mean(eff["ratio"].to_numpy(float) ** self.b))
 
+        t = pd.read_csv(TIMING)
+        self.timing_ages = t["age_months"].to_numpy(float)
+        self.timing_shape = (t["monthly_hazard"] / t["yearly_view"]).to_numpy(float)
+
+    def shape(self, age_months):
+        """Layer 3: how much more (or less) often a car of that age in months changes keeper than the yearly
+        curve says. 1 outside the ages the holdout tested."""
+        a = np.asarray(age_months, float)
+        inside = (a >= TIMING_TESTED[0]) & (a <= TIMING_TESTED[1])
+        return np.where(inside, np.interp(a, self.timing_ages, self.timing_shape), 1.0)
+
     def cohort_median_km(self, age_years):
         """Typical mileage for a car of that age, from the UK parc."""
         return float(np.interp(age_years, self.median_km.index.to_numpy(float),
@@ -113,11 +141,13 @@ class ReadinessEngine:
         return (mileage_km / med) ** b / self.normaliser
 
     def readiness(self, age_years, mileage_km=None, horizon_months=12,
-                  cohort_median_km=None):
+                  cohort_median_km=None, timing=True):
         """The chance this car comes to market within the horizon, with an 80% band.
 
         `mileage_km=None` gives layer 1 alone - the answer for a car whose odometer is unknown,
-        which is most of a used market and is worth being able to say.
+        which is most of a used market and is worth being able to say. Layer 3 (`timing`, on by
+        default) weights the horizon's months by the monthly shape, so a car nearing 48 or 60 months
+        scores higher over a short horizon.
         """
         rate, rate_se = self.base_rate(age_years)
         rng = np.random.default_rng(SEED)
@@ -130,8 +160,21 @@ class ReadinessEngine:
             mult = self.multiplier(age_years, mileage_km, med, self.b)
             factor = (mileage_km / med) ** draw_b / self.normaliser
             annual = np.clip(draw_rate * factor, 1e-6, 0.999)
-        horizon = 1 - (1 - annual) ** (horizon_months / 12)
-        point = 1 - (1 - np.clip(rate * mult, 1e-6, 0.999)) ** (horizon_months / 12)
+        if timing:
+            months = np.arange(horizon_months) + round(age_years * 12)
+            sh = self.shape(months)
+
+            def over(a):  # monthly rate from the annual one, weighted month by month, then compounded
+                monthly = 1 - (1 - np.asarray(a, float)) ** (1 / 12)
+                return 1 - np.exp(np.log1p(-np.clip(np.multiply.outer(monthly, sh), 0, 0.999)).sum(axis=-1))
+
+            horizon = over(annual)
+            point = float(over(np.clip(rate * mult, 1e-6, 0.999)))
+            timing_factor = float(sh.mean())
+        else:
+            horizon = 1 - (1 - annual) ** (horizon_months / 12)
+            point = 1 - (1 - np.clip(rate * mult, 1e-6, 0.999)) ** (horizon_months / 12)
+            timing_factor = 1.0
         return {
             "probability": float(point),
             "low": float(np.quantile(horizon, 0.10)),
@@ -141,15 +184,16 @@ class ReadinessEngine:
             "cohort_median_km": None if mileage_km is None
             else float(cohort_median_km or self.cohort_median_km(age_years)),
             "horizon_months": horizon_months,
+            "timing_factor": timing_factor,
             "driver": "age" if mileage_km is None or abs(np.log(mult)) < 0.1 else "mileage",
         }
 
 
 def readiness(age_years, mileage_km=None, horizon_months=12, brands="all",
-              event=DEFAULT_EVENT, cohort_median_km=None):
+              event=DEFAULT_EVENT, cohort_median_km=None, timing=True):
     """One call, for a caller that does not want to hold an engine."""
     return ReadinessEngine(brands=brands, event=event).readiness(
-        age_years, mileage_km, horizon_months, cohort_median_km)
+        age_years, mileage_km, horizon_months, cohort_median_km, timing)
 
 
 def rank(cars, horizon_months=12, brands="all", event=DEFAULT_EVENT):
@@ -181,3 +225,8 @@ if __name__ == "__main__":
         print(f"  age {age:2d}  {r['probability']:.1%} in 12 months, "
               f"{engine.readiness(age, engine.cohort_median_km(age), 3)['probability']:.1%} "
               "in 3")
+    print()
+    print("Layer 3 (on by default): the chance of coming to market in the next 3 months, by age in months")
+    for months in (44, 47, 56, 59, 62, 66):
+        a, b = (engine.readiness(months / 12, None, 3, timing=t)["probability"] for t in (False, True))
+        print(f"  {months} months  {a:.1%} without layer 3, {b:.1%} with")

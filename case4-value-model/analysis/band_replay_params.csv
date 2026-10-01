@@ -1,0 +1,5 @@
+key,value,description
+weight_on_model_median,0.5000000000000002,"median weight on the model's price, experiment 3, all eleven"
+signal_r2_all,0.004359898968055535,"R² of the model's log error on people's own first log move, all eleven apartments"
+signal_r2_typical,0.026093719816401878,the same on the ten typical apartments
+signal_spread_all,1.3755254588159678,sd of people's own first log move over sd of the model's log error

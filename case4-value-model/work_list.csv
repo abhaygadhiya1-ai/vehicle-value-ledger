@@ -1,0 +1,91 @@
+workstream,phase,role,fte,gates,basis
+ws01 Data integration and the per-car store,1,engineer,6,gate_vin_link_pct,"Build the append-only per-car store (two dates per event) and connect the feeds the baseline needs: claims systems A and B, the OEM order and vehicle record, OEM prices, the dealer master. About one engineer per feed plus one for the store, as the prototype is laid out."
+ws01 Data integration and the per-car store,1,architect,1,,"Data architecture: the event model, the happened/learnt design, security zones. One lead through the build."
+ws01 Data integration and the per-car store,2,engineer,5,gate_gl_reconcile_pct,"France's feeds: the finance joint venture's contracts, the register, the group retailer's realised prices and the returns backfill; the monthly reconciliation to the general ledger."
+ws01 Data integration and the per-car store,2,architect,1,,Architecture for the finance and resale feeds and the reconciliation.
+ws01 Data integration and the per-car store,3,engineer,6,,"Italy, Germany and Spain: per market the joint venture's contracts, the register where open and the dealer crosswalk. About two engineers a market."
+ws01 Data integration and the per-car store,3,architect,1,,Architecture for three more markets' feeds.
+ws01 Data integration and the per-car store,4,engineer,3,,"Every other market on the templates Phase 3 built, and hand-over to the run team."
+ws01 Data integration and the per-car store,4,architect,0.5,,Hand-over of the design to the run team.
+ws02 Entity resolution and VIN linkage,1,data_scientist,2,gate_vin_link_pct;gate_dealer_xwalk_pct,"Record linkage by VIN and fuzzy keys (the prototype's layers 1-2), calibrated to reach the VIN-link and dealer-crosswalk gates."
+ws02 Entity resolution and VIN linkage,1,engineer,2,gate_vin_link_pct;gate_dealer_xwalk_pct,Linkage pipelines and the human review queue's tooling.
+ws02 Entity resolution and VIN linkage,1,product_owner,1,gate_dealer_xwalk_pct,Owns the dealer crosswalk with sales operations and sets the review rules.
+ws02 Entity resolution and VIN linkage,1,data_steward,1,gate_vin_link_pct,Works the review queue on the backfilled claims.
+ws02 Entity resolution and VIN linkage,2,data_scientist,1,,Linkage live on France's feeds; recalibration on reviewed pairs.
+ws02 Entity resolution and VIN linkage,2,engineer,1,,Linkage pipelines for the finance and resale feeds.
+ws02 Entity resolution and VIN linkage,2,data_steward,2,,France's live review queue.
+ws02 Entity resolution and VIN linkage,3,data_scientist,1,,Linkage for three more markets.
+ws02 Entity resolution and VIN linkage,3,engineer,1,,Pipelines for three more markets.
+ws02 Entity resolution and VIN linkage,3,data_steward,4,,"Four markets' review queues, one steward each."
+ws02 Entity resolution and VIN linkage,4,data_scientist,0.5,,Hand-over of the linkage models.
+ws02 Entity resolution and VIN linkage,4,engineer,0.5,,Hand-over of the pipelines.
+ws02 Entity resolution and VIN linkage,4,data_steward,4,,"Queues in the core markets and the first others. The stewards stay in the run cost after month 24."
+ws03 Claims controls and the rulebook map,1,data_scientist,2,gate_dup_precision_pct;gate_dup_recall_pct,"Duplicate and gamed-claim detectors on the backfilled claims, read on the audited flags and seeded duplicates the gates name."
+ws03 Claims controls and the rulebook map,1,engineer,1,gate_dup_precision_pct,Detector pipeline and the flag audit trail.
+ws03 Claims controls and the rulebook map,1,product_owner,2,gate_leak_switch_pct,"One per legacy rulebook: the LLM-drafted map of the two incentive rulebooks, conflicts listed, owners' approvals; the leakage baseline with Finance."
+ws03 Claims controls and the rulebook map,1,legal_counsel,0.5,,Proof-of-sale and audit-right terms written into the incentive programmes.
+ws03 Claims controls and the rulebook map,2,data_scientist,1,gate_claims_recovered_eur_m,Detectors live in France; recalibration on reviewed outcomes.
+ws03 Claims controls and the rulebook map,2,engineer,2,gate_claims_recovered_eur_m,"The hold and review workflow with its 10-working-day service level and the dealers' appeal route."
+ws03 Claims controls and the rulebook map,2,product_owner,1,gate_claims_recovered_eur_m,Runs France's pilot with sales operations and assembles the recoveries evidence for Finance.
+ws03 Claims controls and the rulebook map,3,data_scientist,1,,"Detectors for Italy, Germany and Spain."
+ws03 Claims controls and the rulebook map,3,engineer,1,,Workflow for three more markets.
+ws03 Claims controls and the rulebook map,3,product_owner,1,,Rollout with three markets' sales operations.
+ws03 Claims controls and the rulebook map,4,data_scientist,0.5,,Hand-over of the detectors.
+ws03 Claims controls and the rulebook map,4,engineer,0.5,,Hand-over of the workflow.
+ws04 Value engine re-mark and level charge,1,data_scientist,3,,"The value engine (curve, level, calibrated 80% bands) rebuilt on the group's data; the monthly mark reconciled against the group retailer's realised prices (a Phase 1 gate with no register row)."
+ws04 Value engine re-mark and level charge,1,engineer,2,,Scoring pipeline and the monthly re-mark job.
+ws04 Value engine re-mark and level charge,2,data_scientist,3,,"Recalibration on the realised prices of backfilled returns (a Phase 2 gate with no register row); the level charge per contract."
+ws04 Value engine re-mark and level charge,2,engineer,1,,The level charge fed to contract pricing.
+ws04 Value engine re-mark and level charge,3,data_scientist,3,gate_engine_coverage_tol_pts;gate_engine_margin_pts,The band's coverage on returned cars and the engine against the bought guide on paired cars in four markets.
+ws04 Value engine re-mark and level charge,3,engineer,1,,Scoring for four markets.
+ws04 Value engine re-mark and level charge,4,data_scientist,1,,Every other market; hand-over of the models.
+ws04 Value engine re-mark and level charge,4,engineer,1,,Hand-over of the scoring.
+ws05 Readiness upgrade queue and retention pilot,1,data_scientist,1,gate_uplift_pp,"Readiness scores on the group's contracts; the retention trial's design and size (the group's flag randomised within dealers)."
+ws05 Readiness upgrade queue and retention pilot,1,product_owner,1,gate_uplift_pp,Agrees the trial with the finance partners and dealers.
+ws05 Readiness upgrade queue and retention pilot,2,data_scientist,2,gate_uplift_pp;gate_uplift_significance_pct,Runs and reads France's randomised retention trial.
+ws05 Readiness upgrade queue and retention pilot,2,engineer,1,,Queue feeds to the finance partner; the trial's assignment and logging.
+ws05 Readiness upgrade queue and retention pilot,2,product_owner,1,gate_uplift_pp,Owns the queue with the finance arm.
+ws05 Readiness upgrade queue and retention pilot,2,change_lead,2,gate_uplift_pp,Trial operations with the partner's contact teams and the dealers.
+ws05 Readiness upgrade queue and retention pilot,3,data_scientist,1,,The queue in four markets.
+ws05 Readiness upgrade queue and retention pilot,3,engineer,1,,Feeds for four markets.
+ws05 Readiness upgrade queue and retention pilot,3,change_lead,2,,Contact-team onboarding in three more markets.
+ws05 Readiness upgrade queue and retention pilot,4,data_scientist,0.5,,Hand-over of the scores.
+ws05 Readiness upgrade queue and retention pilot,4,change_lead,1,,Every other market's partners.
+ws06 Resale tools pricing desk channel and days,2,product_owner,1,,Designs the pricing desk and the channel rules with the used-car business.
+ws06 Resale tools pricing desk channel and days,2,engineer,1,,"The pricing desk: the pricer proposes first, then the tied band."
+ws06 Resale tools pricing desk channel and days,3,engineer,2,gate_days_cut_days;gate_route_margin_pct,"Desk, channel routing and days-in-stock tracking live on randomised returns."
+ws06 Resale tools pricing desk channel and days,3,data_scientist,1,gate_days_cut_days;gate_route_margin_pct,Reads the randomised returns (days cut and routed margin) and the band decision from first proposals logged before the cap.
+ws06 Resale tools pricing desk channel and days,3,product_owner,1,gate_route_margin_pct,Owns routing with the used-car business.
+ws06 Resale tools pricing desk channel and days,3,change_lead,1,,Pricers' onboarding to the tied band.
+ws06 Resale tools pricing desk channel and days,4,engineer,1,,Every other market's desks.
+ws06 Resale tools pricing desk channel and days,4,product_owner,0.5,,Hand-over to the used-car business.
+ws07 Dashboards,1,engineer,1,,Management and new-car views on the baseline.
+ws07 Dashboards,1,product_owner,0.5,,Design with the four audiences.
+ws07 Dashboards,2,engineer,1,,"The finance view: the upgrade queue, the level charge and returns, for the finance arm and its partners."
+ws07 Dashboards,3,engineer,1,,"The used-car view (incoming stock, the pricing desk) and all four views in four markets."
+ws07 Dashboards,4,engineer,0.5,,"Every other market's views, then hand-over of the four views to the run team."
+ws08 MLOps and model risk,1,engineer,1,,"The MLOps platform: model registry, monitoring, reproducible training."
+ws08 MLOps and model risk,1,model_validator,1,,Independent validation of the engines before any gate reads them (second line).
+ws08 MLOps and model risk,2,engineer,1,,Monitoring for the live models.
+ws08 MLOps and model risk,2,model_validator,1,,Validation of the recalibrated engine and the level charge.
+ws08 MLOps and model risk,3,engineer,1,,Monitoring for four markets.
+ws08 MLOps and model risk,3,model_validator,1,,Validation before the Phase 3 engine gates are read.
+ws08 MLOps and model risk,4,engineer,0.5,,"Hand-over of the model registry and monitoring to the run team, with its runbooks."
+ws08 MLOps and model risk,4,model_validator,0.5,,Validation of the hand-over.
+ws09 Data rights privacy and governance,1,legal_counsel,2,,"The legal basis for each data source (a Phase 1 gate with no register row), impact assessments, joint-controller arrangements with the finance joint ventures (Art 26), the Data Act route for vehicle data."
+ws09 Data rights privacy and governance,1,architect,0.5,,Security architecture and access control.
+ws09 Data rights privacy and governance,2,legal_counsel,1.5,,"France's register, dealer and partner terms; the trial's consent."
+ws09 Data rights privacy and governance,3,legal_counsel,1.5,,Three more markets' registers and partner arrangements.
+ws09 Data rights privacy and governance,4,legal_counsel,0.5,,Every other market; hand-over to the privacy office.
+ws10 Change training and pilot operations,1,change_lead,1,,The change plan and stakeholder map across the three businesses.
+ws10 Change training and pilot operations,2,change_lead,2,,"France: dealers, claims staff, the finance partner's teams."
+ws10 Change training and pilot operations,3,change_lead,4,,"Four markets' training, one lead each."
+ws10 Change training and pilot operations,4,change_lead,3,,"Training in every other market, then hand-over of the materials to the businesses' own trainers."
+ws11 Programme management and benefit certification,1,programme_manager,2,,Programme director and the programme office.
+ws11 Programme management and benefit certification,1,finance_analyst,1.5,gate_leak_switch_pct,Certifies the leakage baseline from the programme's evidence.
+ws11 Programme management and benefit certification,2,programme_manager,2,,Programme director and the programme office.
+ws11 Programme management and benefit certification,2,finance_analyst,1.5,gate_claims_recovered_eur_m;gate_gl_reconcile_pct,Certifies the recoveries and checks the monthly reconciliation.
+ws11 Programme management and benefit certification,3,programme_manager,2.5,,Four markets in flight at once.
+ws11 Programme management and benefit certification,3,finance_analyst,1.5,gate_exit_floor_eur_m,Certifies the run rate against the floor.
+ws11 Programme management and benefit certification,4,programme_manager,2,,Close and hand-over.
+ws11 Programme management and benefit certification,4,finance_analyst,1,gate_benefits_eur_m;gate_exit_floor_eur_m,Certifies the exit run rate.

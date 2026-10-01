@@ -26,7 +26,7 @@ European), 425,974 sale and 94,194 auction prices. `drivers.py` fits 16 datasets
 - `eu_2025_11`: 839 groups of identical cars listed in more than one country (AutoScout24 cross-listing); which country is right cannot be told.
 - **`eu_2025_11`'s Dutch subset is premium dealer stock, not a market** (found 2026-09-21). Its
   median asking price is **EUR 99,950 for a two-year-old car** on 483 adverts and the curve is not
-  monotone in age. Pricing the Dutch used-car flow from it gives **EUR 30.9bn against EUR 13.0bn**
+  monotone in age. Pricing the Dutch used-car flow from it gives **EUR 30.9bn against EUR 12.9bn**
   from official catalogue prices - a 2.4x overstatement. Adverts per car on the road correlate with
   the register at rho **0.14**. **Do not use it for a national price level.** Its *retention ratio*
   does survive, because the same bias sits in the advert price and the catalogue price and divides
@@ -144,7 +144,8 @@ best evidence we have that these scraped adverts track a real market. Building a
 price index from the 52 monthly snapshots (holding model, age, mileage, fuel, gearbox and body
 fixed) and comparing it with Eurostat's official Latvian second-hand car index (HICP CP07112):
 
-- **The two series correlate at 0.958** across all 52 months. They rise and fall together.
+- **They agree year on year, not month to month.** 12-month changes correlate at 0.90, month-on-month
+  moves at −0.03. The two levels correlate at 0.958, but that mostly says both went up.
 - **They disagree on size.** Ours rises 42% between January 2019 and December 2023; the official
   Latvian index rises 8.8%.
 - **Latvia's own official series is the odd one out, not ours.** Over the same window Eurostat has
@@ -206,14 +207,14 @@ These are not listings. They are the yardsticks the value model measures against
 | `price_indices.parquet` | **6,918 monthly index values.** Eurostat HICP second-hand motor cars (5,234 rows, 39 countries, 1996-01 – 2025-12), ONS D7E9 UK (464, 1988-01 – 2026-08), INSEE France (336, 1998-01 – 2025-12), US CPI used cars (884, 1953-01 – 2026-08) | Eurostat, ONS, INSEE, FRED |
 | `new_car_price_indices.parquet` | **5,942 monthly index values.** Eurostat HICP **new** motor cars (CP07111), 41 countries, 1996-01 – 2025-12. Added 2026-09-20 for `analysis/discount_passthrough.py`. **Deliberately a separate file:** `analysis/latvia_time.py` selects its series with `str.contains("Eurostat")`, so a second Eurostat series inside `price_indices.parquet` would silently break the project's only external validation | Eurostat |
 | `dvm_new_prices.parquet` | 6,333 UK model-years, 1998–2021: the entry price plus the min, median and max across that year's trims | DVM-CAR |
-| `rdw_new_prices.parquet` | Dutch official new-car catalogue price by make, model and registration year, aggregated on RDW's server from 8,863,469 priced passenger cars | [RDW](https://opendata.rdw.nl/Voertuigen/Open-Data-RDW-Gekentekende_voertuigen/m9d7-ebf2) |
+| `rdw_new_prices.parquet` | Dutch official new-car catalogue price by make, model and registration year, aggregated on RDW's server from 8,863,469 priced passenger cars. One row per key: RDW spellings that clean to one name are merged (2026-09-25) | [RDW](https://opendata.rdw.nl/Voertuigen/Open-Data-RDW-Gekentekende_voertuigen/m9d7-ebf2) |
 | `fipe_history.parquet` | Brazil's official FIPE monthly valuation by model and model year, including the 0 km price | [fipeX](https://huggingface.co/datasets/alanwgt/fipex-veiculos-brasil) |
 | `nl_transfer_hazard.parquet` | **Added 2026-09-21 for the readiness engine.** How often a Dutch car of each age changes keeper, and the official new price of the vintages still on the road. 1,376 rows: three populations (all, domestic-registered, including cars since exported) x two brand sets (all, the group's) x two twelve-month windows x single years of age. Numerator and denominator come out of the same register, so the hazard is a count over a count | [RDW](https://opendata.rdw.nl/Voertuigen/Open-Data-RDW-Gekentekende_voertuigen/m9d7-ebf2), CC0 |
 | `uk_mot_panel.parquet` | **Added 2026-09-21 for `analysis/readiness_model.py`.** A quarter-sample of UK cars tested in March 2024 with ten fields and a label - whether the car was ever tested again through July 2025. The only public per-car replacement outcome anywhere in the collection | [DVSA](https://open.data.dvsa.gov.uk/mot-anonymised/index.html), OGL v3.0 |
 
 **The reference tables join to the listings**, and the match rates are measured rather than assumed
-(`analysis/value_retained.py`): **UK 69.9%**, **Netherlands 65.0%**, **Brazil 59.4%**, US 100%
-(Marketcheck already carries an MSRP per row). 661,503 listings now have a borrowed new price in
+(`analysis/value_retained.py`): **UK 71.2%**, **Netherlands 59.6%**, **Brazil 59.4%**, US 100%
+(Marketcheck already carries an MSRP per row). 464,118 listings now have a borrowed new price in
 `data/unified/value_retained.parquet`, each tagged with the source it came from. An early version
 of `build_reference.py` lowercased names without applying the same normalisation as
 `build_unified.py`, so `mercedes-benz` never matched `mercedes benz`; fixing that lifted the UK
@@ -272,21 +273,21 @@ thin for a within-model estimate. This is the honest coverage picture.
 **What the analysis found about the data itself**, from `analysis/lodo_report.md` and
 `analysis/curve_report.md`:
 
-- **More rows are not the point; the right market is.** A dataset whose market is also covered by
-  another dataset loses only **2.8%** accuracy when its own data is taken away. A dataset that is
-  the only one from its market loses **30.6%**. Another million Latvian cars does not teach you
-  Egypt. Collecting a new *country* is worth far more than collecting more rows in a country we
-  already have.
+- **The lone-dataset penalty is a non-European result.** A dataset whose market is also covered by
+  another dataset loses **2.7%** accuracy when its own data is taken away; one that is the only one
+  from its market loses **31.6%**. But 4 of the lone datasets are outside Europe, and among European
+  datasets the gap disappears (+2.7% with a sibling, +2.0% alone). So "a new country beats more
+  rows" cannot be quoted for the group's own markets.
 - **Accuracy saturates after about three datasets, but stability does not.** Going from one dataset
-  to three cuts the error by 6.4%; three to fifteen adds only 2.3% more. Over the same range the
-  spread of the age estimate falls from 2.52 to 0.10 percentage points. The case for having
-  collected 30 sources is *confidence in the number*, not a better prediction.
-- **Borrowing between markets pays only on thin slices.** At 100 local cars it cuts the error 14.7%
-  and prevents an unusable model; by 250 cars the gain is under 1%.
+  to three cuts the error by 9.1%; three to all 14 adds only 1.6% more. Over the same range the
+  spread of the age estimate falls from 2.44 to 0.12 percentage points. The case for having
+  collected many sources is *confidence in the number*, not a better prediction.
+- **Borrowing between markets pays only on thin slices.** At 100 local cars it cuts the typical error
+  4.3%; by 250 cars the gain is under 1%.
 
-So the honest ranking of what each source is worth: a **new country** beats a bigger file, a **new
-price type** (sale, auction) beats another advert scrape, and a **new column** (MSRP, damage,
-days on market) beats another row.
+So the honest ranking of what each source is worth: a **new price type** (sale, auction) beats
+another advert scrape, and a **new column** (MSRP, damage, days on market) beats another row. A
+**new country** beat a bigger file only outside Europe.
 
 ## Other candidates (not downloaded)
 

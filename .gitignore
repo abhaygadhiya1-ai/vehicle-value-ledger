@@ -8,6 +8,9 @@
 #                              and build_reference.py rebuild all of it from the original sources.
 #   Case Study *.pdf           Capgemini's own competition material; not ours to republish.
 #   internal working notes     the audit, the handoff, the storyline and the methods note.
+#   the slides, the strategy   the deck, its guides, the solution document and the primary research.
+#   ledger/dashboard/          a presentation deliverable, kept back like the slides.
+#   local_repos/               the prototypes' local histories; only their files are published.
 /*
 !.gitignore
 !README.md
@@ -19,6 +22,7 @@ case4-value-model/*
 !case4-value-model/*.py
 !case4-value-model/requirements.txt
 !case4-value-model/assumptions.csv
+!case4-value-model/work_list.csv
 !case4-value-model/DATASETS.md
 !case4-value-model/METHODOLOGY_multi_dataset.md
 
@@ -34,3 +38,14 @@ case4-value-model/analysis/*
 !case4-value-model/loaders/
 case4-value-model/loaders/*
 !case4-value-model/loaders/*.py
+
+# The two prototypes: code and reports only.
+!case4-value-model/leak1/
+case4-value-model/leak1/*
+!case4-value-model/leak1/*.py
+!case4-value-model/leak1/*.md
+
+!case4-value-model/ledger/
+case4-value-model/ledger/*
+!case4-value-model/ledger/*.py
+!case4-value-model/ledger/*.md

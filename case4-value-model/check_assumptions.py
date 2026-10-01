@@ -11,9 +11,14 @@ invented. This makes that rule testable rather than a promise:
   * **SOURCED** - a URL is required, and the source must name something specific.
   * **ASSUMPTION** - a low and a high are required, the value must sit between them, and the
     `caveat` column must say what the judgement rests on.
-  * **TARGET** - a number the team chose rather than found: a phase gate, a KPI threshold, an
-    investment tranche. It needs a `caveat` saying why that level, and it must not be used in a
+  * **TARGET** - a number the team chose rather than found: a phase gate or a KPI threshold. It needs a `caveat` saying why that level, and it must not be used in a
     workbook formula, so that a commitment can never be quoted as evidence.
+  * **SYNTHETIC** - a figure from the X1 test harness, a world we or a red team built, or from the X4
+    ledger prototype built on it. It is checked like MEASURED, but its report must sit in `leak1/` or
+    `ledger/` (and a MEASURED report in `analysis/`), so a synthetic result can never pass as a
+    measured one. Its caveat must begin "Synthetic", and like a
+    TARGET it must never feed the value-at-risk model: it measures the tool, not the group (skeptic
+    A14).
 
 Most report figures appear more than once - a p90 of +25.3% is also Germany's best 12-month move -
 so "appears somewhere in the report" would pass a figure taken from the wrong row. The anchor
@@ -30,6 +35,7 @@ from pathlib import Path
 HERE = Path(__file__).parent
 CSV = HERE / "assumptions.csv"
 NUMBER = re.compile(r"[-+]?\d[\d,]*\.?\d*")
+REPORT_DIR = {"MEASURED": ("analysis",), "SYNTHETIC": ("leak1", "ledger")}  # where each checked tier's reports live
 
 
 def numbers_in(text):
@@ -76,13 +82,19 @@ def main():
     for r in rows:
         rid, tier, raw = r["id"], r["tier"], (r["value"] or "").strip()
 
-        if tier == "MEASURED":
+        if tier in REPORT_DIR:
             if not raw:
-                problems.append(f"{rid}: MEASURED with no value")
+                problems.append(f"{rid}: {tier} with no value")
                 continue
-            path = re.match(r"(analysis/[\w.]+\.md)", r["source"])
+            if tier == "SYNTHETIC":
+                if not r["caveat"].strip().startswith("Synthetic"):
+                    problems.append(f"{rid}: SYNTHETIC with a caveat that does not begin 'Synthetic'")
+                if r["used_in"].strip().startswith("Leak"):
+                    problems.append(f"{rid}: SYNTHETIC used in {r['used_in']!r} - a figure from a world we "
+                                    "built must never feed the value-at-risk model")
+            path = re.match(rf"((?:{'|'.join(REPORT_DIR[tier])})/[\w.]+\.md)", r["source"])
             if not path:
-                problems.append(f"{rid}: MEASURED but source names no report file")
+                problems.append(f"{rid}: {tier} but source names no {' or '.join(REPORT_DIR[tier])}/ report file")
                 continue
             report = HERE / path.group(1)
             if not report.exists():
@@ -90,7 +102,7 @@ def main():
                 continue
             anchor = r["anchor"].strip()
             if not anchor:
-                problems.append(f"{rid}: MEASURED with no anchor saying where in the report it is")
+                problems.append(f"{rid}: {tier} with no anchor saying where in the report it is")
                 continue
             if report not in cache:
                 cache[report] = report.read_text()
@@ -98,6 +110,8 @@ def main():
             value, tol = float(raw), tolerance(raw)
             if not places:
                 problems.append(f"{rid}: anchor {anchor!r} not found in {path.group(1)}")
+            elif " >> " in anchor and len(set(places)) > 1:  # tables that share a row and column but disagree
+                problems.append(f"{rid}: anchor {anchor!r} matches {len(places)} different cells in {path.group(1)}")
             elif not any(abs(n - value) <= tol for place in places for n in numbers_in(place)):
                 problems.append(f"{rid}: {raw} not at {anchor!r} in {path.group(1)}")
             checked += 1
@@ -133,7 +147,7 @@ def main():
             problems.append(f"{rid}: unknown tier {tier!r}")
 
     counts = {t: sum(1 for r in rows if r["tier"] == t)
-              for t in ("MEASURED", "SOURCED", "ASSUMPTION", "TARGET")}
+              for t in ("MEASURED", "SOURCED", "ASSUMPTION", "TARGET", "SYNTHETIC")}
     print(f"{len(rows)} rows: " + ", ".join(f"{v} {k.lower()}" for k, v in counts.items()))
     print(f"{checked} checked")
     for p in problems:

@@ -1,0 +1,6 @@
+key,value,description
+rate_low,0.0002856914910582797,"a day in stock per euro of young car: ageing net of the full-window drift, ECB rate"
+rate_mid,0.0003071253742144211,"the same: ageing, ECB rate"
+rate_high,0.0005186027783354624,"the same: ageing net of the pre-shortage drift, banks' cost of equity"
+ageing_day,0.00023947438081614302,value lost to ageing a day per euro of young car
+book_eur_m,5313.0,"buy-back payables due within a year, from the register"

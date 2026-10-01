@@ -21,7 +21,8 @@ Three models, and the third is the one companies actually run:
   * **Two-model (T-learner)** - fit response among the treated and among the untreated, and
     subtract. Simple, and noisy because two errors add.
   * **Class transformation** - relabel the outcome so a single model estimates the uplift
-    directly. One model, one error.
+    directly. One model, one error. Weighted so the two arms count equally: unweighted, the
+    relabelling is only valid on a 50/50 split, and Hillstrom's is two to one.
   * **Response model** - ignore the treatment and target whoever is most likely to respond. This
     is the baseline to beat. **On this data the uplift models do not beat it**, which is the
     finding, and the reason the deliverable is a measurement rather than a recommendation.
@@ -51,6 +52,8 @@ CURVE = HERE / "uplift_engine_qini.csv"
 OUTCOME = "visit"
 SEED = 20260921
 DECILE = 0.10
+REFITS = 10
+MODELS = ("Class transformation", "Two-model (T-learner)", "Response model (the usual way)")
 
 
 def load():
@@ -68,10 +71,10 @@ def load():
     return d, feats
 
 
-def fit_predict(X_tr, y_tr, X_te):
+def fit_predict(X_tr, y_tr, X_te, weight=None):
     m = HistGradientBoostingClassifier(max_iter=200, learning_rate=0.06, max_depth=4,
                                        random_state=SEED)
-    m.fit(X_tr, y_tr)
+    m.fit(X_tr, y_tr, sample_weight=weight)
     return m.predict_proba(X_te)[:, 1]
 
 
@@ -128,6 +131,43 @@ def bootstrap(scores, treated, outcome, draws=400):
     return {k: np.array(v) for k, v in out.items()}
 
 
+def score_models(Xtr, ttr, ytr, Xte):
+    """The three models, fitted on one training set and scored on the held-out customers."""
+    # 1. two models, subtracted
+    s_two = fit_predict(Xtr[ttr == 1], ytr[ttr == 1], Xte) - fit_predict(Xtr[ttr == 0], ytr[ttr == 0], Xte)
+
+    # 2. class transformation: z = 1 when treated-and-responded or untreated-and-not. Weighting
+    #    each arm by 0.5 over its share of the trial makes the split 50/50, and then a single model
+    #    on z estimates the uplift directly: 2 P(z=1|x) - 1. Hillstrom's split is two to one (two
+    #    e-mail arms, one control), so unweighted the score would be part uplift, part response.
+    p = ttr.mean()
+    z = (ytr == ttr).astype(int)
+    s_ct = 2 * fit_predict(Xtr, z, Xte, weight=np.where(ttr == 1, 0.5 / p, 0.5 / (1 - p))) - 1
+
+    # 3. what a company does without uplift: target the most likely responder
+    s_resp = fit_predict(Xtr, ytr, Xte)
+    return s_ct, s_two, s_resp
+
+
+def refits(Xtr, ttr, ytr, Xte, tte, yte, k=REFITS, share=0.8):
+    """Refit every model on random subsamples of the training half, scored on the same held-out half.
+
+    The bootstrap resamples the held-out customers only, so it says nothing about how much a
+    model's answer depends on the customers it was trained on. Uplift is a small difference
+    between two noisy rates, and a model fitted to it can depend on its training draw far more
+    than a response model does.
+    """
+    rng = np.random.default_rng(SEED + 2)
+    out = []
+    for _ in range(k):
+        i = rng.choice(len(ytr), int(share * len(ytr)), replace=False)
+        for name, s in zip(MODELS, score_models(Xtr[i], ttr[i], ytr[i], Xte)):
+            out.append({"Model": name, "top": uplift_at(s, tte, yte), "Qini": qini(s, tte, yte)[3]})
+    return pd.DataFrame(out).groupby("Model", sort=False).agg(
+        top_mean=("top", "mean"), top_min=("top", "min"), top_max=("top", "max"),
+        qini_mean=("Qini", "mean"), qini_min=("Qini", "min"), qini_max=("Qini", "max"))
+
+
 def main():
     d, feats = load()
     rng = np.random.default_rng(SEED)
@@ -141,18 +181,7 @@ def main():
 
     base_lift = yte[tte == 1].mean() - yte[tte == 0].mean()
 
-    # 1. two models, subtracted
-    p1 = fit_predict(Xtr[ttr == 1], ytr[ttr == 1], Xte)
-    p0 = fit_predict(Xtr[ttr == 0], ytr[ttr == 0], Xte)
-    s_two = p1 - p0
-
-    # 2. class transformation: z = 1 when treated-and-responded or untreated-and-not, so a single
-    #    model on z estimates the uplift directly (valid because the split is 50/50 by design)
-    z = (ytr == ttr).astype(int)
-    s_ct = 2 * fit_predict(Xtr, z, Xte) - 1
-
-    # 3. what a company does without uplift: target the most likely responder
-    s_resp = fit_predict(Xtr, ytr, Xte)
+    s_ct, s_two, s_resp = score_models(Xtr, ttr, ytr, Xte)
 
     # 4. the floor: no model at all
     s_rand = rng.random(len(te))
@@ -166,7 +195,6 @@ def main():
                      "vs_average": uplift_at(s, tte, yte) / base_lift if base_lift else np.nan})
         curves[name] = curve
     res = pd.DataFrame(rows)
-    best = res.iloc[res["Qini"].idxmax()]
 
     scores = {"Class transformation": s_ct, "Two-model (T-learner)": s_two,
               "Response model (the usual way)": s_resp, "Random": s_rand}
@@ -178,6 +206,8 @@ def main():
     gap_best = max(gaps, key=lambda m: np.nanmean(gaps[m]))
     g = gaps[gap_best]
     g_mean, g_lo, g_hi = np.nanmean(g), np.nanquantile(g, 0.025), np.nanquantile(g, 0.975)
+    rf = refits(Xtr, ttr, ytr, Xte, tte, yte)
+    rand_top = res[res["Model"] == "Random"]["uplift_top"].iloc[0]
 
     lines = [
         "# The uplift engine, built and validated on a randomised trial",
@@ -209,18 +239,20 @@ def main():
             {"What": "...low end of its range", "Figure": f"{g_lo * 100:+.2f}"},
             {"What": "...high end of its range", "Figure": f"{g_hi * 100:+.2f}"},
             {"What": "Customers in the trial", "Figure": f"{len(d):,}"},
+            *({"What": f"{m}, top-decile uplift, mean of {REFITS} refits",
+               "Figure": f"{rf.loc[m, 'top_mean'] * 100:+.2f}"} for m in MODELS),
         ])),
         "",
         "## The result, which is not the one the technique is usually sold with",
         "",
-        f"**Every model beats sending at random, and no uplift model beats the ordinary response "
-        f"model.** The best uplift approach here is {gap_best.lower()}; against the response model "
+        f"**No uplift model beats the ordinary response model.** The best uplift approach here is "
+        f"{gap_best.lower()}; against the response model "
         f"its top-decile uplift differs by **{g_mean:+.2%} ({g_lo:+.2%} to {g_hi:+.2%})**, a range "
         "that comfortably contains zero.",
         "",
-        f"What *is* clear is that modelling at all is worth it: the top decile chosen by a model "
-        f"shows {best['uplift_top']:+.2%} against {res[res['Model'] == 'Random']['uplift_top'].iloc[0]:+.2%} "
-        f"for a random tenth, and {base_lift:+.1%} for sending to everybody.",
+        f"What *is* clear is that a response model is worth having: its top decile shows "
+        f"{res[res['Model'] == MODELS[2]]['uplift_top'].iloc[0]:+.2%} against {rand_top:+.2%} for a "
+        f"random tenth, and {base_lift:+.1%} for sending to everybody.",
         "",
         "**So the honest recommendation is not \"build an uplift model\".** It is: build the "
         "measurement first, and let it decide. On this dataset the extra machinery earns nothing "
@@ -229,6 +261,33 @@ def main():
         "replacement is a considered, once-every-few-years decision, where who-would-have-anyway "
         "and who-can-be-moved plausibly diverge far more than they do for a clothing e-mail. "
         "**That is a reason to measure it, not a reason to assume it.**",
+        "",
+        "## Does the answer depend on the training draw?",
+        "",
+        f"The bootstrap above resamples the held-out customers; the models stay fixed. Here each model "
+        f"is refitted on {REFITS} random 80% subsamples of the training half and scored on the same "
+        "held-out half.",
+        "",
+    ]
+    lines.append(md_table(pd.DataFrame({
+        "Model": list(MODELS),
+        "Top-decile uplift, mean": [f"{rf.loc[m, 'top_mean']:+.2%}" for m in MODELS],
+        "lowest": [f"{rf.loc[m, 'top_min']:+.2%}" for m in MODELS],
+        "highest": [f"{rf.loc[m, 'top_max']:+.2%}" for m in MODELS],
+        "Qini, mean": [f"{rf.loc[m, 'qini_mean']:+.1f}" for m in MODELS],
+        "Qini, lowest": [f"{rf.loc[m, 'qini_min']:+.1f}" for m in MODELS],
+        "Qini, highest": [f"{rf.loc[m, 'qini_max']:+.1f}" for m in MODELS],
+    })))
+    lines += [
+        "",
+        f"**The response model barely moves; the uplift models fall and scatter.** Averaged over the "
+        f"refits, the uplift models reach {rf.loc[MODELS[0], 'top_mean']:+.2%} and "
+        f"{rf.loc[MODELS[1], 'top_mean']:+.2%} in the top decile, against the response model's "
+        f"{rf.loc[MODELS[2], 'top_mean']:+.2%}; a random tenth gives {rand_top:+.2%}. The single fit in "
+        "the first table is one draw. Uplift is a small difference between two noisy rates, and a "
+        "model fitted to it learns noise as readily as signal. So the negative result stands, and "
+        "firmer: on this trial the response model is the steadier one, and no refit average favours "
+        "an uplift model.",
         "",
         "## What transfers and what does not",
         "",
@@ -244,8 +303,9 @@ def main():
         "is the single thing the group must supply that no public data can.",
         "- **The outcome is a visit, not a purchase.** Conversion in this data is under one per "
         "cent, too thin to rank on.",
-        "- **One dataset.** A negative on Hillstrom is not a negative everywhere; it is the "
-        "reason to run the test rather than the answer to it.",
+        "- **One trial here.** A negative on Hillstrom is not a negative everywhere; it is the "
+        "reason to run the test rather than the answer to it. `uplift_second.py` repeats the test "
+        "on two more public trials, each tested for randomisation first.",
     ]
     OUT.write_text("\n".join(lines) + "\n")
     pd.DataFrame({"frac": np.arange(1, len(te) + 1) / len(te),

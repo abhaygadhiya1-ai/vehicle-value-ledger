@@ -167,8 +167,8 @@ def main():
         "## What this is and is not",
         "",
         "- **It is not the value-at-risk model.** `../Case4_Value_at_Risk.xlsx` prices what the "
-        "group loses when a residual is wrong, and its headline is unchanged at EUR 913m / "
-        "EUR 1,460m. This prices the flow of metal across a market. They are different quantities: "
+        "group loses when a residual is wrong. This prices the flow of metal across a market. They are "
+        "different quantities: "
         "do not add them, and do not present one as the other.",
         "- **The retention curve is measured on advert prices**, so it inherits the project's "
         "standing caveat that an advert is not a sale (`price_types_report.md`). It reproduces "
