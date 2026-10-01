@@ -379,6 +379,7 @@ LLM answers (Claude agents, one batch file each) cached with the private data.
 | `case4-value-model/mot_stream.py` | reads the 4.5 GB UK MOT archives over HTTP range requests, storing none of it |
 | `case4-value-model/leak1/` | leak 1's claims detector and the synthetic world it is tested on, one report per part |
 | `case4-value-model/ledger/` | the vehicle value ledger prototype: an append-only event store with one record per car, and its reports |
+| `case4-value-model/ledger/dashboard/` | the ledger's dashboard: open `index.html` in a browser. The group's figures come from the register and the workbook; the prototype's are real Dutch cars, dates and catalogue prices with synthetic claims, contracts, buyer labels and resale prices. `export.py` writes its data, `npm run build` in `app/` the page |
 | `case4-value-model/DATASETS.md` | every dataset found, used or rejected, with reasons |
 | `case4-value-model/METHODOLOGY_multi_dataset.md` | how many datasets are combined, step by step, each with its result |
 
@@ -391,7 +392,7 @@ LLM answers (Claude agents, one batch file each) cached with the private data.
   publishing"* in `DATASETS.md`. None of it is redistributed. The scripts rebuild all of it from
   the original sources, which is the stronger claim anyway.
 - **The case material.** Capgemini's own, not ours to republish.
-- **The slides, the written strategy and the dashboard.**
+- **The slides and the written strategy.**
 - **The prototypes' worlds and store.** Rebuilt by the scripts in `leak1/` and `ledger/`, except
   the red-team worlds and the cached LLM answers (see *The two prototypes* above).
 - **Our internal working notes** — the audit trail, the session handoff and the storyline. A few
@@ -410,7 +411,9 @@ report and Form 20-F, Eurostat HICP, ONS, INSEE, Washington State DOL, RDW, and 
 Kattuman on discount pass-through.
 
 Code is MIT (see `LICENSE`). The reports and figures are CC BY 4.0. The underlying datasets
-remain under their own licences and are not redistributed here.
+remain under their own licences and are not redistributed here. The dashboard's page also
+carries third-party code, icons and the IBM Plex Sans fonts, each under its own licence: see
+`THIRD_PARTY_NOTICES.txt` and the `LICENSE-*.txt` files beside it in `ledger/dashboard/`.
 
 **Affiliation and accuracy.** Independent student work for a case competition, not affiliated with
 or endorsed by Capgemini or Stellantis. Stellantis is used as a public same-scale proxy for the

@@ -9,7 +9,7 @@
 #   Case Study *.pdf           Capgemini's own competition material; not ours to republish.
 #   internal working notes     the audit, the handoff, the storyline and the methods note.
 #   the slides, the strategy   the deck, its guides, the solution document and the primary research.
-#   ledger/dashboard/          a presentation deliverable, kept back like the slides.
+#   dashboard/app/node_modules the build's packages; the page's notices are in THIRD_PARTY_NOTICES.txt.
 #   local_repos/               the prototypes' local histories; only their files are published.
 /*
 !.gitignore
@@ -49,3 +49,31 @@ case4-value-model/leak1/*
 case4-value-model/ledger/*
 !case4-value-model/ledger/*.py
 !case4-value-model/ledger/*.md
+
+# The ledger's dashboard: the page, its data, its licences and fonts, its checks and its source.
+!case4-value-model/ledger/dashboard/
+case4-value-model/ledger/dashboard/*
+!case4-value-model/ledger/dashboard/*.html
+!case4-value-model/ledger/dashboard/*.js
+!case4-value-model/ledger/dashboard/*.mjs
+!case4-value-model/ledger/dashboard/*.py
+!case4-value-model/ledger/dashboard/*.txt
+!case4-value-model/ledger/dashboard/fonts/
+case4-value-model/ledger/dashboard/fonts/*
+!case4-value-model/ledger/dashboard/fonts/*.woff2
+!case4-value-model/ledger/dashboard/fonts/OFL.txt
+!case4-value-model/ledger/dashboard/app/
+case4-value-model/ledger/dashboard/app/*
+!case4-value-model/ledger/dashboard/app/index.html
+!case4-value-model/ledger/dashboard/app/package.json
+!case4-value-model/ledger/dashboard/app/package-lock.json
+!case4-value-model/ledger/dashboard/app/tsconfig.json
+!case4-value-model/ledger/dashboard/app/vite.config.ts
+!case4-value-model/ledger/dashboard/app/src/
+case4-value-model/ledger/dashboard/app/src/*
+!case4-value-model/ledger/dashboard/app/src/*.ts
+!case4-value-model/ledger/dashboard/app/src/*.tsx
+!case4-value-model/ledger/dashboard/app/src/*.css
+!case4-value-model/ledger/dashboard/app/src/views/
+case4-value-model/ledger/dashboard/app/src/views/*
+!case4-value-model/ledger/dashboard/app/src/views/*.tsx

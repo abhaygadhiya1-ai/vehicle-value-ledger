@@ -1,0 +1,27 @@
+{
+  "name": "vehicle-value-ledger-dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build && cp dist/index.html ../index.html"
+  },
+  "dependencies": {
+    "@formkit/auto-animate": "0.10.0",
+    "@number-flow/react": "0.6.2",
+    "@radix-ui/react-dialog": "1.1.23",
+    "@radix-ui/react-popover": "1.1.23",
+    "@radix-ui/react-tabs": "1.1.21",
+    "echarts": "6.1.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vite-plugin-singlefile": "2.3.3"
+  }
+}
